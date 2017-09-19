@@ -48,11 +48,13 @@ class EngineGeometry:
         # Sometimes, the connecting rod length is known
         self._connecting_rod_length = 132.0
     # Attributes defined as properties
-    def _get_connecting_rod_ratio(self):
+    @property
+    def connecting_rod_ratio(self):
         """ Ratio of the connecting rod length to the crank radius,
         dimensionless. """
         return self._connecting_rod_ratio
-    def _set_connecting_rod_ratio(self, R):
+    @connecting_rod_ratio.setter
+    def connecting_rod_ratio(self, R):
         """ New value of the Ratio of the connecting rod length to the crank
         radius, dimensionless. """
         # A wrong value of this parameter, because of a possible confusion with
@@ -65,12 +67,13 @@ class EngineGeometry:
         self._connecting_rod_ratio = R
         # And the related connecting rod length
         self._connecting_rod_length = 0.5*self._connecting_rod_ratio*self.stroke
-    connecting_rod_ratio = property(_get_connecting_rod_ratio,\
-                                    _set_connecting_rod_ratio)
-    def _get_connecting_rod_length(self):
+        pass
+    @property
+    def connecting_rod_length(self):
         """ Length of the connecting rod, in mm. """
         return self._connecting_rod_length
-    def _set_connecting_rod_length(self, l):
+    @connecting_rod_length.setter
+    def connecting_rod_length(self, l):
         """ New length of the connecting rod, in mm. """
         # Check if the entered value is actually greater than the stroke
         if (l <= self.stroke):
@@ -79,8 +82,7 @@ class EngineGeometry:
         self._connecting_rod_length = l
         # Calculation of the resulting connecting rod ratio
         self._connecting_rod_ratio = l/(0.5*self.stroke)
-    connecting_rod_length = property(_get_connecting_rod_length,\
-                                     _set_connecting_rod_length)
+        pass
     # And other methods
     def displaced_volume(self):
         """ Total displaced volume, or swept volume of the engine, in liter. """
@@ -97,7 +99,34 @@ class EngineGeometry:
         # Ratio of the crank radius on the connecting rod length
         ratio = 1/self.connecting_rod_ratio
         return 1-0.5*((1-np.cos(radangle))+\
-                      ratio*(1-np.sqrt(1-pow(ratio*np.sin(radangle),2))))
+                      (1-np.sqrt(1-pow(ratio*np.sin(radangle),2)))/ratio)
+
+class EngineCycle(EngineGeometry):
+    """Internal cylinder pressure vs. crank angle data series."""
+    def __init__(self):
+        super(EngineCycle, self).__init__()
+        # Name of the cycle if required
+        self.cycle_name = 'cycle1'
+        # List of angles values
+        self.angle = [-360,-180,0,180,360]
+        # List of corresponding pressure values inside the cylinder
+        self.pressure = [1.0,1.0,2.46,1.0,1.0]
+        # Ratio of connecting rod length to the crank radius, sometimes a
+        # starting parameter
+        connecting_rod_ratio =\
+                property(EngineGeometry.connecting_rod_ratio.__get__)
+        # Sometimes, the connecting rod length is known
+        connecting_rod_length =\
+                property(EngineGeometry.connecting_rod_length.__get__)
+    def piston_position(self):
+        """ Relative position of the piston, =1 at TDC and =0 at BDC, regarding
+        to the crank angle in degres. """
+        # Angle in radians
+        radangle = np.radians(self.angle)
+        # Ratio of the crank radius on the connecting rod length
+        ratio = 1/self.connecting_rod_ratio
+        return 1-0.5*((1-np.cos(radangle))+\
+                      (1-np.sqrt(1-pow(ratio*np.sin(radangle),2)))/ratio)
 
 if __name__ == '__main__':
-    geom = EngineGeometry()
+    pass
