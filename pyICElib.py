@@ -25,6 +25,111 @@ __docformat__ = "restructuredtext en"
 __author__ = "Alexandre Vaudrey <alexandre.vaudrey@gmail.com>"
 __date__ = "18/09/2017"
 
+class EngineCylinder:
+    """ 
+    Main geometrical and operating parameters of the concerned engine
+    cylinders. As attributes:
+    - bore, stroke, connecting rod length (both in [mm]) and compression ratio.
+    - angles at which intake and exhaust valves are open and closed.
+    - actual crank angle.
+    And as methods:
+    - displaced, clearance, maximum and actual volumes (both in [l]).
+    - states of intake and exhaust valves, i.e. open or closed.
+    """
+    # TODO: the cross sectional areas of valves will probably be required in the
+    # future.
+    # The default values of these attributes are coming from an existing
+    # 4-strokes and 4-cylinders spark ignited engine from NISSAN.
+    def __init__(self):
+        # If it's necessary to give a name to the engine geometry 
+        self.name = 'cylinder1'
+        # Diameter of each cylinder, in [mm].
+        self.bore = 75.
+        # Stroke, in [mm].
+        self.stroke = 90.
+        # Compression ratio
+        self.compression_ratio = 10.
+        # Connecting rod length, in [mm] 
+        self._connecting_rod_length = 130.
+        # Angles at which the intake valve is open and closed, respectively.
+        # Theses values correspond to ideal Beau de Rochas and Diesel cycles.
+        self.IVO_angle = -360.
+        self.IVC_angle = -180.
+        # Angles at which the exhaust valve is open and closed, respectively
+        self.EVO_angle = 180.
+        self.EVC_angle = 360.
+    # Connecting rod length is defined as a property to avoid any mechanical
+    # interference with the engine shaft.
+    @property
+    def connecting_rod_length(self):
+        """ Length of the connecting rod, in mm. """
+        return self._connecting_rod_length
+    @connecting_rod_length.setter
+    def connecting_rod_length(self, l):
+        """ New length of the connecting rod, in mm. """
+        # Check if the entered value is actually greater than the stroke
+        if (l <= self.stroke):
+            raise ValueError("The connecting rod length cannot be lower than"
+                             "the stroke.")
+        self._connecting_rod_length = l
+        pass
+    # And methods
+    def displaced_volume(self):
+        """ Total displaced volume, or swept volume of the engine, in liter. """
+        return 1e-6*0.25*np.pi*pow(self.bore,2)*self.stroke
+    def clearance_volume(self):
+        """ Total clearance volume of the engine, in liter. """
+        return self.displaced_volume()/(self.compression_ratio-1.0)
+    def maximum_volume(self):
+        """The maximum volume inside the cylinders, equal to the sum of the
+        displaced volume and of the clearance one, is used as an horizontal
+        limit within the indicated diagram."""
+        return self.displaced_volume()+self.clearance_volume()
+    def actual_volume(self, crank_angle):
+        """Actual volume within which the working gas is enclosed, as a function
+        of the crank angle, in °. (0° corresponds to top-center and 180° to
+        bottom-center)"""
+        # Angle in radians
+        radangle = np.radians(crank_angle)
+        # Crank radius
+        r = 0.5*self.stroke
+        # Ratio of the crank radius on the connecting rod length
+        ratio = r/self.connecting_rod_length
+        # Fraction of the stroke corresponding to the actual volume
+        x = r*((1-np.cos(radangle))\
+               +(1-np.sqrt(1-pow(ratio*np.sin(radangle),2)))/ratio)
+        # Actual volume
+        V = self.clearance_volume()+self.displaced_volume()/self.stroke*x
+        return V
+    def volume_angle_variation(self, crank_angle):
+        """ Variation of the actual volume V (in [l]) with the crank angle (in
+        [°]) for a given value of the latter.""" 
+        # Angle in radians
+        radangle = np.radians(crank_angle)
+        # Ratio of the crank radius on the connecting rod length
+        ratio = 0.5*self.stroke/self.connecting_rod_length
+        # Seeked variation
+        dVdtheta = 0.5*self.displaced_volume()*(np.sin(radangle)\
+                                              +0.5*ratio*np.sin(2*radangle))
+        return dVdtheta*np.pi/180.
+    # FIXME: these two methods must be done taking into account the periodic
+    # motion of the crank
+    def is_intake_valve_open(self, crank_angle):
+        """ Is the intake valve open at this crank angle. """
+        if (crank_angle < self.IVC_angle):
+            IV_open = True
+        else:
+            IV_open = False
+        return IV_open
+    def is_exhaust_valve_open(self, crank_angle):
+        """ Is the intake valve open at this crank angle. """ 
+        if (crank_angle < self.EVC_angle):
+            EV_open = True
+        else:
+            EV_open = False
+        return EV_open
+
+# === Old version, to cancel once used ========================================
 class EngineGeometry:
     """
     Geometric model of a reciprocating internal combustion engine.
@@ -91,6 +196,11 @@ class EngineGeometry:
     def clearance_volume(self):
         """ Total clearance volume of the engine, in liter. """
         return self.displaced_volume()/(self.compression_ratio-1.0)
+    def maximum_volume(self):
+        """The maximum volume inside the cylinders, equal to the sum of the
+        displaced volume and of the clearance one, is used as an horizontal
+        limit within the indicated diagram."""
+        return self.displaced_volume()+self.clearance_volume()
     def piston_position(self, angle):
         """ Relative position of the piston, =1 at TDC and =0 at BDC, regarding
         to the crank angle in degres. """
@@ -103,6 +213,7 @@ class EngineGeometry:
 
 class EngineCycle(EngineGeometry):
     """Internal cylinder pressure vs. crank angle data series."""
+    # TODO : Computation of the mean indicated pressure using the (p,V) datas
     def __init__(self):
         super(EngineCycle, self).__init__()
         # Name of the cycle if required
@@ -127,6 +238,19 @@ class EngineCycle(EngineGeometry):
         ratio = 1/self.connecting_rod_ratio
         return 1-0.5*((1-np.cos(radangle))+\
                       (1-np.sqrt(1-pow(ratio*np.sin(radangle),2)))/ratio)
+    def actual_volume(self):
+        """Actual volume in the cylinders, in liters."""
+        return self.clearance_volume()+(1-self.piston_position())*\
+                self.displaced_volume()
 
 if __name__ == '__main__':
-    pass
+    cylindre1 = EngineCylinder()
+    print(cylindre1.__dict__)
+    # Technical parameters of the engine
+#    cummins = EngineCycle()
+#    cummins.name = 'Cummins QSB6.7'
+#    cummins.stroke = 124.0
+#    cummins.bore = 107.0
+#    cummins.compression_ratio = 17.2
+#    cummins.number_of_cylinders = 6
+#    cummins._connecting_rod_length = 261.5
