@@ -202,6 +202,59 @@ class EngineCylinder:
                                               +0.5*ratio*np.sin(2*radangle))
         return dVdtheta*np.pi/180.
 
+class NISTShomateEquation:
+    """
+    Shomate equation used to manipulate temperature depending thermochemical
+    properties of various compounds, see : https://webbook.nist.gov/. Concerned
+    properties are:
+        - Specific molar heat capacity at constant pressure, in kJ/(mol.K).
+        - Standard molar enthalpy, in kJ/mol.
+        - Standard molar entropy at standard pressure of 1 bar, in kJ/(mol.K).
+    """
+    def __init__(self, compound):
+        # We load the database of NIST coefficients
+        self.__NIST_datas = np.load("NIST_data.npy", allow_pickle=True).all()
+        # Specific compound under concern
+        self._name = compound
+        # NIST coefficients related to the compound
+        self._coefficients = self.__NIST_datas[self._name]
+        # Temperature at which the physical properties are considered
+        self._temperature = [298.15]
+    # Attributes as properties
+    @property
+    def name(self):
+        """ Specific compound under concern. """
+        return self._name
+    @name.setter
+    def name(self, compound):
+        """ Change the compound under concern. """
+        # Check if the chose compound is in the list
+        clist = self.compounds_list()
+        if (compound not in clist):
+            raise ValueError("The compound you choose is not in the current list!")
+        # And import the NIST coefficients related to this new compound
+        self._coefficients = self.__NIST_datas[compound]
+    @property
+    def temperature(self):
+        """ Temperature at which the asked properties are considered. """
+        return self._temperature
+    @temperature.setter
+    def temperature(self, newT):
+        """ Change the temperature value. """
+        if (type(newT) == float):
+            self._temperature = [newT]
+        elif (type(newT) == np.ndarray) or (type(newT) == tuple):
+            self._temperature = list(newT)
+        elif (type(newT) == list):
+            self._temperature = newT
+        else:
+            raise ValueError("Temperature must be a numerical value, as float,\
+                             list, tuple or array")
+    # Methods
+    def  compounds_list(self):
+        """ List the chemical compounds that can be manipulated. """
+        return list(self.__NIST_datas.keys())
+
 if __name__ == '__main__':
     pass
 #    cylindre1 = EngineCylinder()
