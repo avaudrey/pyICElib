@@ -220,6 +220,8 @@ class NISTShomateEquation:
         self._coefficients = self.__NIST_datas[self._name]
         # Temperature at which the physical properties are considered
         self._temperature = [298.15]
+        # Universal constant of ideal gases
+        self.__R = 8.314462618
     # Attributes as properties
     @property
     def name(self):
@@ -251,9 +253,67 @@ class NISTShomateEquation:
             raise ValueError("Temperature must be a numerical value, as float,\
                              list, tuple or array")
     # Methods
-    def  compounds_list(self):
+    def compounds_list(self):
         """ List the chemical compounds that can be manipulated. """
         return list(self.__NIST_datas.keys())
+    def molar_heat_capacity_at_cst_pressure(self):
+        """
+        Specific molar heat capacity at constant pressure Cp, in J/(mol.K).
+        """
+        specific_heat_capacity = []
+        # For each temperature value
+        for temp in self._temperature:
+            # We look for the set of coefficient corresponding to the range of
+            # temperature that concerns us
+            for rangeT in self._coefficients:
+                if (rangeT[0][0] <= temp <= rangeT[0][1]):
+                    # And we extract the coefficients for the calculation of the
+                    # cp
+                    coeffs = rangeT[1:]
+                    # Reduced temperature
+                    t = 1e-3*temp
+                    specific_heat_capacity.append(coeffs[0]+coeffs[1]*t\
+                                                  +coeffs[2]*pow(t,2)\
+                                                  +coeffs[3]*pow(t,3)\
+                                                  +coeffs[4]/pow(t,2))
+        return specific_heat_capacity
+    def molar_heat_capacity_at_cst_volume(self):
+        """
+        Specific molar heat capacity at constant volume CV, in J/(mol.K).
+        """
+        # TODO : this formula is supposed to work only for ideal gas, how to do
+        # otherwise?
+        # Use of the Mayer's relation
+        cpressure = self.molar_heat_capacity_at_cst_pressure()
+        return list(np.array(cpressure)-self.__R)
+    def heat_capacity_ratio(self):
+        """
+        Heat capacity ratio 'gamma'.
+        """
+        cpressure = self.molar_heat_capacity_at_cst_pressure()
+        cvolume = self.molar_heat_capacity_at_cst_volume()
+        return list(np.array(cpressure)/np.array(cvolume))
+    def molar_enthalpy(self):
+        """ Molar enthalpy, in kJ/mol."""
+        enthalpy = []
+        # For each temperature value
+        for temp in self._temperature:
+            # We look for the set of coefficient corresponding to the range of
+            # temperature that concerns us
+            for rangeT in self._coefficients:
+                if (rangeT[0][0] <= temp <= rangeT[0][1]):
+                    # And we extract the coefficients for the calculation of the
+                    # cp
+                    coeffs = rangeT[1:]
+                    # Reduced temperature
+                    t = 1e-3*temp
+                    enthalpy.append(coeffs[0]*t+0.5*coeffs[1]*pow(t,2)\
+                                    +0.333*coeffs[2]*pow(t,3)\
+                                    +0.25*coeffs[3]*pow(t,4)\
+                                    -coeffs[4]/t+coeffs[5]+coeffs[7])
+        return enthalpy
+    def molar_entropy(self):
+        pass
 
 if __name__ == '__main__':
     pass
