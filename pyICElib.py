@@ -302,8 +302,8 @@ class NISTShomateEquation:
             # temperature that concerns us
             for rangeT in self._coefficients:
                 if (rangeT[0][0] <= temp <= rangeT[0][1]):
-                    # And we extract the coefficients for the calculation of the
-                    # cp
+                    # And we extract the coefficients needed for the calculation
+                    # of enthalpy
                     coeffs = rangeT[1:]
                     # Reduced temperature
                     t = 1e-3*temp
@@ -313,7 +313,24 @@ class NISTShomateEquation:
                                     -coeffs[4]/t+coeffs[5]+coeffs[7])
         return enthalpy
     def molar_entropy(self):
-        pass
+        """ Molar specific entropy at standard pressure, in J/(mol.K). """
+        entropy = [] 
+        # For each temperature value
+        for temp in self._temperature:
+            # We look for the set of coefficient corresponding to the range of
+            # temperature that concerns us
+            for rangeT in self._coefficients:
+                if (rangeT[0][0] <= temp <= rangeT[0][1]):
+                    # And we extract the coefficients for the calculation of
+                    # entropy
+                    coeffs = rangeT[1:]
+                    # Reduced temperature
+                    t = 1e-3*temp
+                    entropy.append(coeffs[0]*np.log(t)+coeffs[1]*t\
+                                  +0.5*coeffs[2]*pow(t,2)\
+                                  +0.333*coeffs[3]*pow(t,3)\
+                                  -0.5*coeffs[4]/pow(t,2)+coeffs[6])
+        return entropy
 
 if __name__ == '__main__':
     pass
