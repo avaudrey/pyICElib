@@ -163,6 +163,9 @@ class EngineCylinder:
         self._connecting_rod_length = l
         pass
     # And methods
+    def piston_area(self):
+        """ Area of the piston's upper surface, in m^2. """
+        return 0.25*np.pi*pow(self.bore*1e-3,2)
     def displaced_volume(self):
         """ Total displaced volume, or swept volume of the engine, in liter. """
         return 1e-6*0.25*np.pi*pow(self.bore,2)*self.stroke
@@ -171,8 +174,8 @@ class EngineCylinder:
         return self.displaced_volume()/(self.compression_ratio-1.0)
     def maximum_volume(self):
         """The maximum volume inside the cylinders, equal to the sum of the
-        displaced volume and of the clearance one, is used as an horizontal
-        limit within the indicated diagram."""
+        displaced and clearance volumes, is used as an right vertical limit
+        within the indicated diagram."""
         return self.displaced_volume()+self.clearance_volume()
     def actual_volume(self, crank_angle):
         """Actual volume within which the working gas is enclosed, as a function
@@ -201,6 +204,16 @@ class EngineCylinder:
         dVdtheta = 0.5*self.displaced_volume()*(np.sin(radangle)\
                                               +0.5*ratio*np.sin(2*radangle))
         return dVdtheta*np.pi/180.
+    def piston_speed(self, crank_angle, engine_speed):
+        """ Linear speed of the piston, in m/s, as a function of the crank angle
+        in ° and of the engine speed in rpm. This speed is counted as negative
+        when the working gas volume decreases, and positive when its increases."""
+        # Volume variation with angle in m^3/rad
+        volume_variation = self.volume_angle_variation(crank_angle)*180/np.pi*1e-3
+        # Angular speed of the engine in rad/s
+        angular_speed = engine_speed*np.pi/30
+        # And linear speed
+        return angular_speed/self.piston_area()*volume_variation
 
 class NISTShomateEquation:
     """
