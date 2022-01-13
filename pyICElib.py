@@ -214,6 +214,33 @@ class EngineCylinder:
         angular_speed = engine_speed*np.pi/30
         # And linear speed
         return angular_speed/self.piston_area()*volume_variation
+    def volume_fraction_to_angle(self, volume_fraction):
+        """ Calculation of the crank angle value which corresponds to a specific
+        fraction of the gas volume, with 0.0 corresponding to clearance volume
+        and 1.0 to maximum volume, i.e. displaced + clearance. Volume fraction
+        must be positive and returned angle is positive as well."""
+        # Function used in the solving approach, x representing the crank angle
+        # and y the volume fraction
+        if (type(volume_fraction)==np.ndarray) or (type(volume_fraction) == list):
+            x = []
+            for y in volume_fraction:
+                f = lambda z:(self.actual_volume(z)-self.clearance_volume())/\
+                self.displaced_volume()-y
+                # Initial guess for the solution
+                x0 = np.rad2deg(2*np.arcsin(np.sqrt(y)))
+                # Solving process
+                x.append(sp.fsolve(f,x0)[0])
+                solution = np.array(x)
+        else:
+            # Function used in the solving approach, x representing the crank
+            # angle
+            f = lambda z:(self.actual_volume(z)-self.clearance_volume())/\
+                    self.displaced_volume()-volume_fraction
+            # Initial guess for the solution
+            x0 = np.rad2deg(2*np.arcsin(np.sqrt(volume_fraction)))
+            # Solving process
+            solution = sp.fsolve(f,x0)[0]
+        return solution
 
 class NISTShomateEquation:
     """
